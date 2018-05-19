@@ -41,7 +41,15 @@ FusionEKF::FusionEKF() {
         0, 0, 0,    1000;
   
   MatrixXd F_ = MatrixXd(4, 4);
+  F_ << 1, 0, 1, 0,
+        0, 1, 0, 1,
+        0, 0, 1, 0,
+        0, 0, 0, 1;
   MatrixXd Q_ = MatrixXd(4, 4);
+  Q_ << 1, 0, 1, 0,
+        0, 1, 0, 1,
+        1, 0, 1, 0,
+        0, 1, 0, 1;
   
   VectorXd x_ = VectorXd(4);
   x_ << 1, 1, 1, 1;
@@ -143,16 +151,23 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   //Use the sensor type to perform the update step.
   //Update the state and covariance matrices.
 
+  Eigen::VectorXd z = measurement_pack.raw_measurements_;
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
+    while (z(1) > M_PI) {
+      z(1) -= 2 * M_PI;
+    }
+    while (z(1) < -M_PI) {
+      z(1) += 2 * M_PI;
+    }
     // Radar updates
     ekf_.R_ = R_radar_;
     ekf_.H_ = Tools::CalculateJacobian(ekf_.x_);
-    ekf_.UpdateEKF(measurement_pack.raw_measurements_);
+    ekf_.UpdateEKF(z);
   } else {
     // Laser updates
     ekf_.R_ = R_laser_;
     ekf_.H_ = H_laser_;
-    ekf_.Update(measurement_pack.raw_measurements_);
+    ekf_.Update(z);
   }
 
   // print the output
